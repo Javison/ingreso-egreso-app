@@ -12,7 +12,7 @@ import Swal from 'sweetalert2';
 import { User } from './user.model';
 import { AngularFirestore } from '@angular/fire/firestore';
 import { AppState } from '../app.reducer';
-import { SetUserAction } from './auth.actions';
+import { SetUserAction, UnsetUserAction } from './auth.actions';
 import { Subscription } from 'rxjs';
 
 @Injectable({
@@ -20,6 +20,7 @@ import { Subscription } from 'rxjs';
 })
 export class AuthService {
 
+  private usuario: User;
   private userSubscription: Subscription;
 
   constructor( private afAuth: AngularFireAuth,
@@ -37,18 +38,18 @@ export class AuthService {
 
                     console.log(fbUser);
                     //console.log(fbUser.email);
-                    if ( fbUser ) {
-                      this.userSubscription = 
-                        this.afDB.doc(`${ fbUser.uid }/usuario`)
-                                .valueChanges()
-                                .subscribe( (usuarioObj: any) => {
-                                  const newUser = new User( usuarioObj ); 
-                                  this.store.dispatch( new SetUserAction( newUser ));
-                                  console.log(newUser);
-                                })
-                    }
+                    this.userSubscription = 
+                      this.afDB.doc(`${ fbUser.uid }/usuario`)
+                              .valueChanges()
+                              .subscribe( (usuarioObj: any) => {
+                                const newUser = new User( usuarioObj ); 
+                                this.store.dispatch( new SetUserAction( newUser ));
+                                this.usuario = newUser;
+                                console.log(newUser);
+                              })
 
                   } else {
+                    this.usuario = null;
                     if (this.userSubscription) {
                       this.userSubscription.unsubscribe();
                     }
@@ -114,6 +115,8 @@ export class AuthService {
     this.router.navigate(['/login']);
     this.afAuth.auth.signOut();
 
+    this.store.dispatch( new UnsetUserAction() );
+
   }
 
 
@@ -129,6 +132,12 @@ export class AuthService {
           return fbUser != null;
         })
       )
+  }
+
+
+
+  getUsuario() {
+    return { ...this.usuario };
   }
   
 }
